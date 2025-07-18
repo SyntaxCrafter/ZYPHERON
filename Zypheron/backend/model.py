@@ -1,3 +1,4 @@
+import random
 from http.client import responses
 
 import cohere
@@ -54,49 +55,46 @@ ChatHistory = [
 ]
 
 def FirstLayerDMM(prompt: str = "test"):
-
- messages.append({"role":"user","content":f"{prompt}"})
- chat_stream = co.chat_stream(
-       model = 'command-r-plus',
-       message = prompt,
-       temperature =0.7,
-       chat_history=ChatHistory,
-       prompt_truncation='OFF',
-       connectors=[],
-       preamble=preamble
-   )
-response = " "
-
-for event in chat_stream:
-       if event.event_type == "text-generation":
-response += event.text
-
-response = response.replace("\n","")
-response = response.split(",")
-
-
-response = [i.strip()for i in response]
-
-   temp = []
-
-   for task in response:
-       for func in func:
-           if task.startswith(func):
-               temp.append(task)
-
-response = temp
-
-matched_tasks = [task for task in tasks if any(task.startswith(func) for func in funcs)]
-
-# Check if any task still contains "(query)"
-if any("(query)" in task for task in matched_tasks):
-    return FirstLayerDMM(prompt=prompt)  # Optional: consider logging or limiting recursion
-else:
-    return matched_tasks
-
+    messages.append({
+        "role":"user",
+        "content":f"{prompt} is {random.choice(ChatHistory)}"
+    })
+    chat_stream = co.chat_stream(
+        model='command-r-plus',
+        message=prompt,
+        temperature=0.7,
+        chat_history=ChatHistory,
+        prompt_truncation='OFF',
+        connectors=[],
+        preamble=preamble
+    )
+    response = " "
+    for event in chat_stream:
+        if event.event_type == "text-generation":
+            response += event.text
+            messages.append({
+                "role":"user",
+                "content":f"{prompt} is {random.choice(ChatHistory)}"
+            })
+        response = response.replace("\n", "")
+        response = response.split(",")
+        response = [i.strip() for i in response]
+        temp = []
+        for task in response:
+            for func in func:
+                if task.startswith(func):
+                    temp.append(task)
+        response = temp
+        matched_tasks = [task for task in task if any(task.startswith(func) for func in funcs)]
+        # Check if any task still contains "(query)"
+        if any("(query)" in task for task in matched_tasks):
+            return FirstLayerDMM(prompt=prompt)  # Optional: consider logging or limiting recursion
+        else:
+            return matched_tasks
 if __name__ == "__main__":
     while True:
         user_input = input(">>> ")
         print(FirstLayerDMM(prompt=user_input))
+
 
 
